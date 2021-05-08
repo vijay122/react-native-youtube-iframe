@@ -180,7 +180,7 @@ const YoutubeIframe = (props, ref) => {
     <View>
       {allowOnlyPlayPauseOption && (
         <TouchableOpacity
-          style={[styles.playandpauseonly, {height: height}]}
+          style={[styles.playandpauseonly, {height: height-10}]}
           onPress={onPlayPauseClick}
           onLongPress={onPlayPauseClick}
         />
@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
+    backgroundColor:"red"
   },
 });
 
