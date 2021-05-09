@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    backgroundColor:"red"
+    top:0,
   },
 });
 
