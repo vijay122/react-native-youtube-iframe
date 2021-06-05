@@ -6,10 +6,11 @@ import React, {
   useCallback,
   useImperativeHandle,
 } from 'react';
-import {View, TouchableOpacity, StyleSheet, Platform} from 'react-native';
-import {WebView} from './WebView';
-import {PLAYER_STATES, PLAYER_ERROR, CUSTOM_USER_AGENT} from './constants';
-import {EventEmitter} from 'events';
+import Slider from "react-native-slider";
+import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { WebView } from './WebView';
+import { PLAYER_STATES, PLAYER_ERROR, CUSTOM_USER_AGENT } from './constants';
+import { EventEmitter } from 'events';
 import {
   playMode,
   soundMode,
@@ -30,20 +31,31 @@ const YoutubeIframe = (props, ref) => {
     webViewProps,
     playbackRate = 1,
     contentScale = 1.0,
-    onError = _err => {},
-    onReady = _event => {},
+    onError = _err => { },
+    onReady = _event => { },
     playListStartIndex = 0,
     initialPlayerParams = {},
     allowWebViewZoom = false,
     forceAndroidAutoplay = false,
-    onChangeState = _event => {},
-    onFullScreenChange = _status => {},
-    onPlaybackQualityChange = _quality => {},
-    onPlaybackRateChange = _playbackRate => {},
+    onChangeState = _event => { },
+    onFullScreenChange = _status => { },
+    onPlaybackQualityChange = _quality => { },
+    onPlaybackRateChange = _playbackRate => { },
     allowOnlyPlayPauseOption = false,
+    customSliderTrackColor = "grey",
+    customSliderThumbColor = "white",
+    onCustomSliderChange = null,
+    onCustomSliderChangeCompleted = null,
   } = props;
 
+  const insertIf = (condition, ...elements) => { // (A)
+    return condition ? elements : [];
+  }
+
   const [playpauseonly, setPlayPause] = useState(play);
+  const [playpausesingletap, setPlayPauseSingleTap] = useState(false);
+  const [canSlide, setSliderVisibility] = useState(false);
+  const [sliderPosition, setSliderPosition] = useState(0);
   const webViewRef = useRef(null);
   const eventEmitter = useRef(new EventEmitter());
   const [playerReady, setPlayerReady] = useState(false);
@@ -110,7 +122,6 @@ const YoutubeIframe = (props, ref) => {
     if (!playerReady) {
       return;
     }
-
     [
       playMode[play || playpauseonly],
       soundMode[mute],
@@ -173,19 +184,74 @@ const YoutubeIframe = (props, ref) => {
     ],
   );
 
+  const handleCustomSliderChangeCompleted = (event) => {
+    if (onCustomSliderChangeCompleted) {
+      onCustomSliderChangeCompleted(event);
+    }
+  }
+
+  const handleCustomSliderChange = (value) => {
+    setSliderPosition(value);
+    webViewRef.current.injectJavaScript(
+      PLAYER_FUNCTIONS.seekToScript(69, true));
+    if (onCustomSliderChange) {
+      onCustomSliderChange(value);
+    }
+  }
+
+  const onPlayPauseSingleTap = () => {
+    console.log("single tap");
+    if (playpauseonly) {
+      setPlayPauseSingleTap(!playpausesingletap);
+      setSliderVisibility(!canSlide);
+    }
+    setPlayPause(!playpauseonly);
+
+  };
+
   const onPlayPauseClick = () => {
     setPlayPause(!playpauseonly);
   };
+
+  let containerCss = [
+    styles.playandpauseonly,
+    insertIf(playpausesingletap, styles.playandpausesingletap),
+  ];
   return (
     <View>
       {allowOnlyPlayPauseOption && (
-        <TouchableOpacity
-          style={[styles.playandpauseonly, {height: height-10}]}
-          onPress={onPlayPauseClick}
-          onLongPress={onPlayPauseClick}
-        />
-      )}
-      <View style={{height, width}}>
+        <>
+          <TouchableOpacity
+            style={[containerCss, { height: height }]}
+            onPress={onPlayPauseSingleTap}
+            onLongPress={onPlayPauseClick}
+          />
+          {canSlide && <Slider
+            style={{
+              position: "absolute",
+              bottom: 12,
+              zIndex: 10,
+              width: "100%"
+            }}
+            thumbStyle={{
+              backgroundColor: customSliderThumbColor,
+              height: 25,
+              borderRadius: 0,
+
+            }}
+            trackStyle={{
+              backgroundColor: customSliderTrackColor,
+              height: 15,
+            }}
+            value={sliderPosition}
+            onValueChange={value => handleCustomSliderChange(value)}
+            onSlidingComplete={(event) => handleCustomSliderChangeCompleted(event)}
+          />
+          }
+        </>
+      )
+      }
+      <View style={{ height, width }}>
         <WebView
           originWhitelist={['*']}
           allowsInlineMediaPlayback
@@ -194,7 +260,7 @@ const YoutubeIframe = (props, ref) => {
           allowsFullscreenVideo={!initialPlayerParams?.preventFullScreen}
           userAgent={
             forceAndroidAutoplay
-              ? Platform.select({android: CUSTOM_USER_AGENT, ios: ''})
+              ? Platform.select({ android: CUSTOM_USER_AGENT, ios: '' })
               : ''
           }
           onShouldStartLoadWithRequest={request => {
@@ -224,18 +290,25 @@ const YoutubeIframe = (props, ref) => {
           }}
         />
       </View>
-    </View>
+    </View >
   );
 };
 
 const styles = StyleSheet.create({
-  webView: {backgroundColor: 'transparent'},
+  webView: { backgroundColor: 'transparent' },
   playandpauseonly: {
     zIndex: 1,
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    top:0,
+  },
+  playandpausesingletap: {
+    // zIndex: 1,
+    // position: 'absolute',
+    // bottom: 0,
+    // width: '100%',
+    opacity: 0.1,
+    backgroundColor: 'rgba(52, 52, 52, 0.4)'
   },
 });
 
